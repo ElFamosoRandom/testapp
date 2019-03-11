@@ -1,10 +1,12 @@
 package com.grochowski.testapp;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.location.LocationManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -13,10 +15,16 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 import static com.grochowski.testapp.constantes.constantes.ERROR_DIALOG_REQUEST;
 import static com.grochowski.testapp.constantes.constantes.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
@@ -27,11 +35,47 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
 
     private boolean mLocationPermissionGranted = false;
+    private FusedLocationProviderClient mFusedLocationClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Button yourButton = (Button) findViewById(R.id.BtnMapAccess);
+
+        yourButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, MapsActivity.class));
+            }
+        });
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+    }
+
+    private void getLastKnownLocation() {
+        Log.d(TAG, "getLastKnowLocation: called");
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        mFusedLocationClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
+            @Override
+            public void onComplete(@NonNull Task<Location> task) {
+                if(task.isSuccessful()){
+                    Location location = task.getResult();
+                    Log.d(TAG,"CnComplete : latitude: " + location.getLatitude());
+                    Log.d(TAG,"CnComplete : longitude: " + location.getLongitude());
+
+
+                }
+            }
+        });
     }
 
     private boolean checkMapServices(){
@@ -79,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
             mLocationPermissionGranted = true;
             Toast.makeText(this, "La permission est accordé, maintenant faut faire le reste du code 1", Toast.LENGTH_SHORT).show();
             Log.d("ANCIEN TCHAT POSITION","IF APRES PERMISSON 1");
+            getLastKnownLocation();
 
         } else {
             ActivityCompat.requestPermissions(this,
@@ -133,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
                 if(mLocationPermissionGranted){
                     Toast.makeText(this, "La permission est accordé, maintenant faut faire le reste du code 2", Toast.LENGTH_SHORT).show();
                     Log.d("ANCIEN TCHAT POSITION","IF APRES PERMISSON 2");
+                    getLastKnownLocation();
                 }
                 else{
                     getLocationPermission();
@@ -146,10 +192,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume(){
         super.onResume();
-        // put your code here...
+
         if(checkMapServices()){
             if(mLocationPermissionGranted){
                 Toast.makeText(this, "La permission est accordé, maintenant faut faire le reste du code 3", Toast.LENGTH_SHORT).show();
+                getLastKnownLocation();
             }
             else{
                 getLocationPermission();
